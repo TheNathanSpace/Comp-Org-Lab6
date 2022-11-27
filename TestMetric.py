@@ -1,45 +1,10 @@
-from CacheSet import CacheSet
-
-
-class Cache:
-    def __init__(self, num_sets: int, blocks_per_set: int, replacement_policy: int, address_bits: list):
-        self.num_sets: int = num_sets
-        self.sets: list = list()
-        self.blocks_per_set: int = blocks_per_set
-
+class TestMetric:
+    def __init__(self, address_bits: list):
+        self.address_dict = {}
         self.address_bits: list = address_bits
         self.tag_end_bit: int = self.address_bits[0]
         self.index_end_bit: int = self.tag_end_bit + self.address_bits[1]
         self.offset_end_bit: int = self.index_end_bit + self.address_bits[2]
-
-        self.create_sets(num_sets, blocks_per_set, replacement_policy)
-        self.init_metrics()
-
-        self.cache_replacements = 0
-
-    def init_metrics(self):
-        self.num_accesses: int = 0
-        self.num_hits: int = 0
-        self.num_misses: int = 0
-
-    def cache_hit(self):
-        self.num_accesses += 1
-        self.num_hits += 1
-
-    def cache_miss(self):
-        self.num_accesses += 1
-        self.num_misses += 1
-
-    def print_status(self):
-        print(f"Total_Number_of_Accesses: {self.num_accesses}")
-        print(f"Cache_Hits: {self.num_hits}")
-        print(f"Cache_Misses: {self.num_misses}")
-        print(f"Cache_Hit_Rate: {self.num_hits / self.num_accesses}")
-        print(f"Cache_Miss_Rate: {self.num_misses / self.num_accesses}")
-
-    def create_sets(self, num_sets: int, blocks_per_set: int, replacement_policy: int):
-        for i in range(num_sets):
-            self.sets.append(CacheSet(blocks_per_set, replacement_policy))
 
     def dec_to_bin(self, input: int, size: int) -> list:
         """
@@ -97,11 +62,7 @@ class Cache:
         split_address["offset"] = self.bin_to_dec(bin_address[slice(self.index_end_bit, self.offset_end_bit)])
         return split_address
 
-    def load_block(self, address, line_num):
-        """
-        Load an address block into the cache
-        :param address: The address as an int
-        """
+    def store_access(self, address: int):
         bin_address = self.dec_to_bin(address, 32)
         split_addresses = self.get_split_address(bin_address)
 
@@ -109,22 +70,9 @@ class Cache:
         index: int = split_addresses["index"]
         offset: int = split_addresses["offset"]
 
-        cache_set: CacheSet = self.sets[index % self.num_sets]
-        cache_hit = cache_set.is_block_loaded(tag)
-        if line_num % 50000 == 0:
-            loaded_blocks = 0
-            set: CacheSet
-            for set in self.sets:
-                loaded_blocks += len(set.blocks)
-            print(f"Loaded blocks: {loaded_blocks}")
+        if index not in self.address_dict:
+            self.address_dict[index] = {}
+        if tag not in self.address_dict[index]:
+            self.address_dict[index][tag] = 0
 
-        if cache_hit:
-            # print(f"Loading address {address} (split: {tag} / {index} / {offset}), set {index % self.num_sets}--HIT")
-            self.cache_hit()
-        else:
-            # print(f"Loading address {address} (split: {tag} / {index} / {offset}), set {index % self.num_sets}--MISS")
-            self.cache_miss()
-            if len(cache_set.blocks) == cache_set.num_blocks:
-                self.cache_replacements += 1
-            cache_set.load_block(tag)
-        cache_set.access_address(tag)
+        self.address_dict[index][tag] = self.address_dict[index][tag] + 1

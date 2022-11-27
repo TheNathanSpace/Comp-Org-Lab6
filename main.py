@@ -1,9 +1,11 @@
 import json
+import math
 import re
 from pathlib import Path
 
 from Cache import Cache
 from CacheSet import CacheSet
+from TestMetric import TestMetric
 
 
 def read_config_file(config_file: Path):
@@ -54,19 +56,36 @@ if __name__ == '__main__':
     cache_size = config_dict["cache-size"]
     block_size = config_dict["block-size"]
 
-    # todo: all this is wrong. cache size probably includes valid bits and tags
-
     # Get sizes in bytes (from words)
     block_size_bytes = block_size * 4
     set_size_bytes = associativity * block_size_bytes
     cache_size_bytes = cache_size * 1024
+    num_blocks = int(cache_size_bytes / block_size_bytes)
     num_sets = int(cache_size_bytes / set_size_bytes)
 
+    print()
+    print(f"Number of blocks: {num_blocks} (2^{int(math.log2(num_blocks))})")
     print(f"Number of sets: {num_sets}")
+    index_bits = int(math.log2(num_sets))
+    offset_bits = int(math.log2(block_size_bytes))
+    tag_bits = 32 - index_bits - offset_bits
+    print(f"tag / index / offset: {tag_bits} / {index_bits} / {offset_bits}")
+    address_bits = [tag_bits, index_bits, offset_bits]
+
+    data_bits = block_size_bytes * 8
+    print(f"Data bits per block: {data_bits}")
+    bits_per_block = data_bits + tag_bits + 1
+    print(f"Bits per block: {bits_per_block}")
+    print(f"Total cache size: {(bits_per_block * num_blocks) / 1024 / 8} KBytes")
+    print()
 
     # Create sets
-    cache = Cache(num_sets = num_sets, blocks_per_set = associativity, replacement_policy = replacement_policy)
+    cache = Cache(num_sets = num_sets, blocks_per_set = associativity, replacement_policy = replacement_policy,
+                  address_bits = address_bits)
 
+    test_metric = TestMetric(address_bits = address_bits)
+
+    unique_addresses = set()
     # Run the trace file
     with open(file = trace_file, mode = "r", encoding = "utf-8") as opened_trace:
         lines = opened_trace.readlines()
@@ -78,13 +97,25 @@ if __name__ == '__main__':
 
             line = line.replace("\n", "")
             line = int(line)
-            cache.load_block(line)
+            unique_addresses.add(line)
+            # print()
+            cache.load_block(address = line, line_num = line_num)
+            test_metric.store_access(address = line)
 
     print()
     print(f"Cache_Size: {cache_size} KBytes")
     print(f"Block_Size: {block_size} words ({block_size_bytes} bytes)")
     print(f"Associativity: {associativity} way")
-    print(f"Replacement_Policy: Random(hardcoded)")
+
+    replacement_policy_string: str
+    if replacement_policy == 1:
+        replacement_policy_string = "LRU (least recently used)"
+    elif replacement_policy == 2:
+        replacement_policy_string = "Random"
+    else:
+        replacement_policy_string = "NMRU + Random (pseudo-LRU)"
+
+    print(f"Replacement_Policy: {replacement_policy_string}")
 
     cache.print_status()
 
@@ -96,3 +127,19 @@ if __name__ == '__main__':
         if len(set.blocks) > max_blocks_in_set:
             max_blocks_in_set = len(set.blocks)
     print(f"Max number of blocks in one set: {max_blocks_in_set}")
+
+    print(f"Accessed indices: {len(test_metric.address_dict)}")
+    max_accesses_for_tag = 0
+    min_accesses_for_tag = 15000000000
+    for index in test_metric.address_dict:
+        for tag in test_metric.address_dict[index]:
+            num_accesses = test_metric.address_dict[index][tag]
+            max_accesses_for_tag = max(max_accesses_for_tag, num_accesses)
+            min_accesses_for_tag = min(min_accesses_for_tag, num_accesses)
+
+    print(f"Max accesses for single tag: {max_accesses_for_tag}")
+    print(f"Min accesses for single tag: {min_accesses_for_tag}")
+
+    print(
+        f"Total cache replacements: {cache.cache_replacements} / {cache.num_accesses} ({cache.cache_replacements / cache.num_accesses}%)")
+    print(f"Unique addresses: {len(unique_addresses)}")
