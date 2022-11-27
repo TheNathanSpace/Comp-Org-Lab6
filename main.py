@@ -131,11 +131,13 @@ if __name__ == '__main__':
     print(f"Accessed indices: {len(test_metric.address_dict)}")
     max_accesses_for_tag = 0
     min_accesses_for_tag = 15000000000
+    accessed_tags_num = 0
     for index in test_metric.address_dict:
         for tag in test_metric.address_dict[index]:
             num_accesses = test_metric.address_dict[index][tag]
             max_accesses_for_tag = max(max_accesses_for_tag, num_accesses)
             min_accesses_for_tag = min(min_accesses_for_tag, num_accesses)
+            accessed_tags_num += 1
 
     print(f"Max accesses for single tag: {max_accesses_for_tag}")
     print(f"Min accesses for single tag: {min_accesses_for_tag}")
@@ -143,3 +145,4 @@ if __name__ == '__main__':
     print(
         f"Total cache replacements: {cache.cache_replacements} / {cache.num_accesses} ({cache.cache_replacements / cache.num_accesses}%)")
     print(f"Unique addresses: {len(unique_addresses)}")
+    print(f"Accessed tags: {accessed_tags_num}")
