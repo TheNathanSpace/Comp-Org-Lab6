@@ -48,10 +48,11 @@ class CacheSet:
             random_i: int = random.randrange(0, len(self.blocks))
             discarded_block: CacheBlock = self.blocks[random_i]
             # Randomly select new block if it is the most recently used
-            while discarded_block == self.most_recently_used:
-                # print("Selecting new one")
-                random_i: int = random.randrange(0, len(self.blocks))
-                discarded_block: CacheBlock = self.blocks[random_i]
+            if self.num_blocks != 1:
+                while discarded_block == self.most_recently_used:
+                    # print("Selecting new one")
+                    random_i: int = random.randrange(0, len(self.blocks))
+                    discarded_block: CacheBlock = self.blocks[random_i]
 
         # print(f"Discarding block tag {discarded_block.tag}")
         self.blocks.remove(discarded_block)

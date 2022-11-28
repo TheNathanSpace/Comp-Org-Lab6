@@ -1,10 +1,10 @@
-import json
 import math
 import re
 from pathlib import Path
 
 from Cache import Cache
 from CacheSet import CacheSet
+from Logger import Logger
 from TestMetric import TestMetric
 
 
@@ -37,19 +37,20 @@ def read_config_file(config_file: Path):
 
 
 if __name__ == '__main__':
+    logger: Logger = Logger()
     # Load config
     config_file = Path("config.txt")
     if not config_file.exists():
-        print("ERROR: config.txt does not exist. Exiting.")
+        logger.log_and_print("ERROR: config.txt does not exist. Exiting.")
         exit(-1)
     config_dict = read_config_file(config_file = config_file)
-    print(json.dumps(config_dict, indent = 4))
 
     # Check that trace file exists
     trace_file = Path("tracefile.txt")
     if not trace_file.exists():
-        print("ERROR: tracefile.txt does not exist. Exiting.")
+        logger.log_and_print(f"ERROR: {trace_file.name} does not exist. Exiting.")
         exit(-1)
+    logger.log(f"Using trace file: {trace_file.name}\n")
 
     associativity = config_dict["associativity"]
     replacement_policy = config_dict["replacement-policy"]
@@ -63,21 +64,21 @@ if __name__ == '__main__':
     num_blocks = int(cache_size_bytes / block_size_bytes)
     num_sets = int(cache_size_bytes / set_size_bytes)
 
-    print()
-    print(f"Number of blocks: {num_blocks} (2^{int(math.log2(num_blocks))})")
-    print(f"Number of sets: {num_sets}")
+    logger.log("----- CALCULATED CACHE CHARACTERISTICS -----")
+    logger.log(f"Number of blocks: {num_blocks} (2^{int(math.log2(num_blocks))})")
+    logger.log(f"Number of sets: {num_sets}")
     index_bits = int(math.log2(num_sets))
     offset_bits = int(math.log2(block_size_bytes))
     tag_bits = 32 - index_bits - offset_bits
-    print(f"tag / index / offset: {tag_bits} / {index_bits} / {offset_bits}")
+    logger.log(f"# of bits (tag / index / offset): {tag_bits} / {index_bits} / {offset_bits}")
     address_bits = [tag_bits, index_bits, offset_bits]
 
     data_bits = block_size_bytes * 8
-    print(f"Data bits per block: {data_bits}")
     bits_per_block = data_bits + tag_bits + 1
-    print(f"Bits per block: {bits_per_block}")
-    print(f"Total cache size: {(bits_per_block * num_blocks) / 1024 / 8} KBytes")
-    print()
+    logger.log(f"Data / total bits per block: {data_bits} / {bits_per_block} bits")
+    logger.log(f"Total cache size: {(bits_per_block * num_blocks) / 1024 / 8} KBytes")
+    logger.log("--------------------------------------------")
+    logger.log("")
 
     # Create sets
     cache = Cache(num_sets = num_sets, blocks_per_set = associativity, replacement_policy = replacement_policy,
@@ -85,7 +86,6 @@ if __name__ == '__main__':
 
     test_metric = TestMetric(address_bits = address_bits)
 
-    unique_addresses = set()
     # Run the trace file
     with open(file = trace_file, mode = "r", encoding = "utf-8") as opened_trace:
         lines = opened_trace.readlines()
@@ -93,20 +93,24 @@ if __name__ == '__main__':
         for line in lines:
             line_num += 1
             if line_num % 50000 == 0:
-                print(f"Finished: {int((line_num / len(lines)) * 100)}%")
+                loaded_blocks = 0
+                set: CacheSet
+                for set in cache.sets:
+                    loaded_blocks += len(set.blocks)
+                print(f"Finished: {int((line_num / len(lines)) * 100)}%. Loaded blocks: {loaded_blocks} / {num_blocks}")
 
             line = line.replace("\n", "")
             line = int(line)
-            unique_addresses.add(line)
             # print()
             cache.load_block(address = line, line_num = line_num)
             test_metric.store_access(address = line)
 
-    print()
-    print(f"Cache_Size: {cache_size} KBytes")
-    print(f"Block_Size: {block_size} words ({block_size_bytes} bytes)")
-    print(f"Associativity: {associativity} way")
+    logger.log("------------- SIMULATION STATS -------------")
+    logger.log(f"Cache_Size: {cache_size} KBytes")
+    logger.log(f"Block_Size: {block_size} words ({block_size_bytes} bytes)")
+    logger.log(f"Associativity: {associativity} way")
 
+    # Print out the correct replacement policy
     replacement_policy_string: str
     if replacement_policy == 1:
         replacement_policy_string = "LRU (least recently used)"
@@ -115,70 +119,68 @@ if __name__ == '__main__':
     else:
         replacement_policy_string = "NMRU + Random (pseudo-LRU)"
 
-    print(f"Replacement_Policy: {replacement_policy_string}")
+    logger.log(f"Replacement_Policy: {replacement_policy_string}")
 
-    cache.print_status()
+    cache.print_status(logger = logger)
+    logger.log("--------------------------------------------")
 
-    print()
-    print(f"Number of sets: {len(cache.sets)}")
+    logger.log("")
     max_blocks_in_set = 0
     set: CacheSet
     for set in cache.sets:
         if len(set.blocks) > max_blocks_in_set:
             max_blocks_in_set = len(set.blocks)
-    print(f"Max number of blocks in one set: {max_blocks_in_set}")
+    logger.log(f"Max number of blocks in one set: {max_blocks_in_set}")
 
-    print(f"Accessed indices: {len(test_metric.address_dict)}")
+    logger.log(f"Accessed indices: {len(test_metric.address_dict)}")
     max_accesses_for_tag = 0
     min_accesses_for_tag = 15000000000
-    accessed_tags_num = 0
     for index in test_metric.address_dict:
         for tag in test_metric.address_dict[index]:
             num_accesses = test_metric.address_dict[index][tag]
             max_accesses_for_tag = max(max_accesses_for_tag, num_accesses)
             min_accesses_for_tag = min(min_accesses_for_tag, num_accesses)
-            accessed_tags_num += 1
 
-    print(f"Max accesses for single tag: {max_accesses_for_tag}")
-    print(f"Min accesses for single tag: {min_accesses_for_tag}")
+    logger.log(f"Max accesses for single tag: {max_accesses_for_tag}")
+    logger.log(f"Min accesses for single tag: {min_accesses_for_tag}")
 
-    print(
-        f"Total cache replacements: {cache.cache_replacements} / {cache.num_accesses} ({cache.cache_replacements / cache.num_accesses}%)")
-    print(f"Unique addresses: {len(unique_addresses)}")
-    print(f"Accessed tags: {accessed_tags_num}")
+    logger.log(
+        f"Total cache replacements: {cache.cache_replacements} / {cache.num_accesses} ({cache.cache_replacements / cache.num_accesses})")
+    logger.log(f"Unique addresses in {trace_file.name}: {len(test_metric.unique_addresses)}")
+    logger.log(f"Unique tags accessed: {len(test_metric.unique_index_tags)}")
 
-    the_cache = []
-    num_replacements = 0
-    num_hits = 0
-    test_metric = TestMetric(address_bits = address_bits)
-    with open(file = trace_file, mode = "r", encoding = "utf-8") as opened_trace:
-        lines = opened_trace.readlines()
-        for i in range(0, num_sets):
-            blocks = [-1, -1, 0]
-            the_cache.append(blocks)
-
-        for line in lines:
-            line = int(line.replace("\n", ""))
-            split_bits: list = test_metric.get_split_address_from_int(line)
-            set_index = split_bits[1] % num_sets
-            the_blocks = the_cache[set_index]
-            if split_bits[0] == the_blocks[0] or split_bits[0] == the_blocks[1]:
-                num_hits += 1
-            else:
-                if the_blocks[0] == -1:
-                    the_blocks[0] = split_bits[0]
-                    the_blocks[2] = 1
-                elif the_blocks[1] == -1:
-                    the_blocks[1] = split_bits[0]
-                    the_blocks[2] = 0
-                else:
-                    num_replacements += 1
-                    the_blocks[the_blocks[2]] = split_bits[0]
-                    if the_blocks[2] == 1:
-                        the_blocks[2] = 0
-                    else:
-                        the_blocks[2] = 1
-
-    print()
-    print(f"num_hits: {num_hits}")
-    print(f"num_replacements: {num_replacements}")
+    # the_cache = []
+    # num_replacements = 0
+    # num_hits = 0
+    # test_metric = TestMetric(address_bits = address_bits)
+    # with open(file = trace_file, mode = "r", encoding = "utf-8") as opened_trace:
+    #     lines = opened_trace.readlines()
+    #     for i in range(0, num_sets):
+    #         blocks = [-1, -1, 0]
+    #         the_cache.append(blocks)
+    #
+    #     for line in lines:
+    #         line = int(line.replace("\n", ""))
+    #         split_bits: list = test_metric.get_split_address_from_int(line)
+    #         set_index = split_bits[1] % num_sets
+    #         the_blocks = the_cache[set_index]
+    #         if split_bits[0] == the_blocks[0] or split_bits[0] == the_blocks[1]:
+    #             num_hits += 1
+    #         else:
+    #             if the_blocks[0] == -1:
+    #                 the_blocks[0] = split_bits[0]
+    #                 the_blocks[2] = 1
+    #             elif the_blocks[1] == -1:
+    #                 the_blocks[1] = split_bits[0]
+    #                 the_blocks[2] = 0
+    #             else:
+    #                 num_replacements += 1
+    #                 the_blocks[the_blocks[2]] = split_bits[0]
+    #                 if the_blocks[2] == 1:
+    #                     the_blocks[2] = 0
+    #                 else:
+    #                     the_blocks[2] = 1
+    #
+    # print()
+    # print(f"num_hits: {num_hits}")
+    # print(f"num_replacements: {num_replacements}")

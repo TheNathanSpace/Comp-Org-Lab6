@@ -1,4 +1,5 @@
 from CacheSet import CacheSet
+from Logger import Logger
 
 
 class Cache:
@@ -30,12 +31,12 @@ class Cache:
         self.num_accesses += 1
         self.num_misses += 1
 
-    def print_status(self):
-        print(f"Total_Number_of_Accesses: {self.num_accesses}")
-        print(f"Cache_Hits: {self.num_hits}")
-        print(f"Cache_Misses: {self.num_misses}")
-        print(f"Cache_Hit_Rate: {self.num_hits / self.num_accesses}")
-        print(f"Cache_Miss_Rate: {self.num_misses / self.num_accesses}")
+    def print_status(self, logger: Logger):
+        logger.log(f"Total_Number_of_Accesses: {self.num_accesses}")
+        logger.log(f"Cache_Hits: {self.num_hits}")
+        logger.log(f"Cache_Misses: {self.num_misses}")
+        logger.log(f"Cache_Hit_Rate: {self.num_hits / self.num_accesses}")
+        logger.log(f"Cache_Miss_Rate: {self.num_misses / self.num_accesses}")
 
     def create_sets(self, num_sets: int, blocks_per_set: int, replacement_policy: int):
         for i in range(num_sets):
@@ -111,12 +112,6 @@ class Cache:
 
         cache_set: CacheSet = self.sets[index % self.num_sets]
         cache_hit = cache_set.is_block_loaded(tag)
-        if line_num % 50000 == 0:
-            loaded_blocks = 0
-            set: CacheSet
-            for set in self.sets:
-                loaded_blocks += len(set.blocks)
-            print(f"Loaded blocks: {loaded_blocks}")
 
         if cache_hit:
             # print(f"Loading address {address} (split: {tag} / {index} / {offset}), set {index % self.num_sets}--HIT")

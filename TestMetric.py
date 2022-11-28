@@ -6,6 +6,9 @@ class TestMetric:
         self.index_end_bit: int = self.tag_end_bit + self.address_bits[1]
         self.offset_end_bit: int = self.index_end_bit + self.address_bits[2]
 
+        self.unique_index_tags = set()
+        self.unique_addresses = set()
+
     def dec_to_bin(self, input: int, size: int) -> list:
         """
         Converts an int value to its binary representation (works for positive and negative numbers)
@@ -76,6 +79,12 @@ class TestMetric:
             self.address_dict[index][tag] = 0
 
         self.address_dict[index][tag] = self.address_dict[index][tag] + 1
+
+        self.unique_addresses.add(address)
+        tag_index_combined = self.dec_to_bin(tag, self.tag_end_bit) + self.dec_to_bin(index,
+                                                                                      self.index_end_bit - self.tag_end_bit)
+        tag_index_combined = self.bin_to_dec(tag_index_combined)
+        self.unique_index_tags.add(tag_index_combined)
 
     def get_split_address_from_int(self, dec_address: int):
         bin_address = self.dec_to_bin(dec_address, 32)
