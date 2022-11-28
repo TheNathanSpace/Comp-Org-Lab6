@@ -91,6 +91,9 @@ if __name__ == '__main__':
         lines = opened_trace.readlines()
         line_num = 0
         for line in lines:
+            if "#" in line or line == "\n":
+                continue
+
             line_num += 1
             if line_num % 50000 == 0:
                 loaded_blocks = 0

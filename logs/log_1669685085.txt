@@ -1,0 +1,30 @@
+Using trace file: tracefile.txt
+
+----- CALCULATED CACHE CHARACTERISTICS -----
+Number of blocks: 2048 (2^11)
+Number of sets: 1024
+# of bits (tag / index / offset): 18 / 10 / 4
+Data / total bits per block: 128 / 147 bits
+Total cache size: 36.75 KBytes
+--------------------------------------------
+
+------------- SIMULATION STATS -------------
+Cache_Size: 32 KBytes
+Block_Size: 4 words (16 bytes)
+Associativity: 2 way
+Replacement_Policy: NMRU + Random (pseudo-LRU)
+Total_Number_of_Accesses: 1500000
+Cache_Hits: 1488461
+Cache_Misses: 11539
+Cache_Hit_Rate: 0.9923073333333333
+Cache_Miss_Rate: 0.007692666666666667
+--------------------------------------------
+
+Max number of blocks in one set: 2
+Max accesses for single index/tag: 79941
+Min accesses for single index/tag: 1
+Total cache replacements: 9551 / 1500000 (0.006367333333333333)
+
+Unique addresses in tracefile.txt: 10642
+Unique indices accessed: 1020 / 1024
+Unique index/tags accessed: 4053
