@@ -76,3 +76,13 @@ class TestMetric:
             self.address_dict[index][tag] = 0
 
         self.address_dict[index][tag] = self.address_dict[index][tag] + 1
+
+    def get_split_address_from_int(self, dec_address: int):
+        bin_address = self.dec_to_bin(dec_address, 32)
+        split_addresses = self.get_split_address(bin_address)
+
+        tag: int = split_addresses["tag"]
+        index: int = split_addresses["index"]
+        offset: int = split_addresses["offset"]
+
+        return [tag, index, offset]

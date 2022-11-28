@@ -146,3 +146,39 @@ if __name__ == '__main__':
         f"Total cache replacements: {cache.cache_replacements} / {cache.num_accesses} ({cache.cache_replacements / cache.num_accesses}%)")
     print(f"Unique addresses: {len(unique_addresses)}")
     print(f"Accessed tags: {accessed_tags_num}")
+
+    the_cache = []
+    num_replacements = 0
+    num_hits = 0
+    test_metric = TestMetric(address_bits = address_bits)
+    with open(file = trace_file, mode = "r", encoding = "utf-8") as opened_trace:
+        lines = opened_trace.readlines()
+        for i in range(0, num_sets):
+            blocks = [-1, -1, 0]
+            the_cache.append(blocks)
+
+        for line in lines:
+            line = int(line.replace("\n", ""))
+            split_bits: list = test_metric.get_split_address_from_int(line)
+            set_index = split_bits[1] % num_sets
+            the_blocks = the_cache[set_index]
+            if split_bits[0] == the_blocks[0] or split_bits[0] == the_blocks[1]:
+                num_hits += 1
+            else:
+                if the_blocks[0] == -1:
+                    the_blocks[0] = split_bits[0]
+                    the_blocks[2] = 1
+                elif the_blocks[1] == -1:
+                    the_blocks[1] = split_bits[0]
+                    the_blocks[2] = 0
+                else:
+                    num_replacements += 1
+                    the_blocks[the_blocks[2]] = split_bits[0]
+                    if the_blocks[2] == 1:
+                        the_blocks[2] = 0
+                    else:
+                        the_blocks[2] = 1
+
+    print()
+    print(f"num_hits: {num_hits}")
+    print(f"num_replacements: {num_replacements}")
