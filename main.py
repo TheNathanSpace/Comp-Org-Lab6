@@ -46,7 +46,7 @@ if __name__ == '__main__':
     config_dict = read_config_file(config_file = config_file)
 
     # Check that trace file exists
-    trace_file = Path("tracefile.txt")
+    trace_file = Path("my_tracefile.txt")
     if not trace_file.exists():
         logger.log_and_print(f"ERROR: {trace_file.name} does not exist. Exiting.")
         exit(-1)
@@ -132,22 +132,22 @@ if __name__ == '__main__':
             max_blocks_in_set = len(set.blocks)
     logger.log(f"Max number of blocks in one set: {max_blocks_in_set}")
 
-    logger.log(f"Accessed indices: {len(test_metric.address_dict)}")
     max_accesses_for_tag = 0
     min_accesses_for_tag = 15000000000
-    for index in test_metric.address_dict:
-        for tag in test_metric.address_dict[index]:
-            num_accesses = test_metric.address_dict[index][tag]
-            max_accesses_for_tag = max(max_accesses_for_tag, num_accesses)
-            min_accesses_for_tag = min(min_accesses_for_tag, num_accesses)
+    for tag_index_combined in test_metric.index_tag_accesses_dict:
+        num_accesses = test_metric.index_tag_accesses_dict[tag_index_combined]
+        max_accesses_for_tag = max(max_accesses_for_tag, num_accesses)
+        min_accesses_for_tag = min(min_accesses_for_tag, num_accesses)
 
-    logger.log(f"Max accesses for single tag: {max_accesses_for_tag}")
-    logger.log(f"Min accesses for single tag: {min_accesses_for_tag}")
-
+    logger.log(f"Max accesses for single index/tag: {max_accesses_for_tag}")
+    logger.log(f"Min accesses for single index/tag: {min_accesses_for_tag}")
     logger.log(
         f"Total cache replacements: {cache.cache_replacements} / {cache.num_accesses} ({cache.cache_replacements / cache.num_accesses})")
+
+    logger.log("")
     logger.log(f"Unique addresses in {trace_file.name}: {len(test_metric.unique_addresses)}")
-    logger.log(f"Unique tags accessed: {len(test_metric.unique_index_tags)}")
+    logger.log(f"Unique indices accessed: {len(test_metric.unique_indices)} / {num_sets}")
+    logger.log(f"Unique index/tags accessed: {len(test_metric.unique_index_tags)}")
 
     # the_cache = []
     # num_replacements = 0
