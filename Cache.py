@@ -1,9 +1,14 @@
+import bit_util
 from CacheSet import CacheSet
 from Logger import Logger
 
 
 class Cache:
     def __init__(self, num_sets: int, blocks_per_set: int, replacement_policy: int, address_bits: list):
+        self.num_accesses = None
+        self.num_hits = None
+        self.num_misses = None
+
         self.num_sets: int = num_sets
         self.sets: list = list()
         self.blocks_per_set: int = blocks_per_set
@@ -32,83 +37,35 @@ class Cache:
         self.num_misses += 1
 
     def print_status(self, logger: Logger):
-        logger.log(f"Total_Number_of_Accesses: {self.num_accesses}")
-        logger.log(f"Cache_Hits: {self.num_hits}")
-        logger.log(f"Cache_Misses: {self.num_misses}")
-        logger.log(f"Cache_Hit_Rate: {self.num_hits / self.num_accesses}")
-        logger.log(f"Cache_Miss_Rate: {self.num_misses / self.num_accesses}")
+        """
+        Print the cache's simulation stats
+        :param logger:
+        """
+        logger.log_and_print(f"Total_Number_of_Accesses: {self.num_accesses}")
+        logger.log_and_print(f"Cache_Hits: {self.num_hits}")
+        logger.log_and_print(f"Cache_Misses: {self.num_misses}")
+        logger.log_and_print(f"Cache_Hit_Rate: {self.num_hits / self.num_accesses}")
+        logger.log_and_print(f"Cache_Miss_Rate: {self.num_misses / self.num_accesses}")
 
     def create_sets(self, num_sets: int, blocks_per_set: int, replacement_policy: int):
+        """
+        Initializes all the cache sets when the Cache is created
+        :param num_sets: The numbers of sets in the cache
+        :param blocks_per_set: The set associativity
+        :param replacement_policy: Should be one of 1, 2, 3 (see config.txt)
+        """
         for i in range(num_sets):
             self.sets.append(CacheSet(blocks_per_set, replacement_policy))
 
-    def dec_to_bin(self, input: int, size: int) -> list:
+    def load_block(self, address):
         """
-        Converts an int value to its binary representation (works for positive and negative numbers)
-        :param input: The number to convert to binary
-        :param size: The size of the number in bits
-        :return: A list of single-character strings representing the number in binary (as a list, since in Python strings are immutable)
-        """
-        i: int = size - 1
-
-        result = "0" * size
-        result = list(result)
-
-        onBit: str = '1'
-        offBit: str = '0'
-        if input < 0:
-            input *= -1
-            input -= 1
-            onBit = '0'
-            offBit = '1'
-
-        while i != -1:
-            quotient: int = int(input / 2)
-            remainder: int = input % 2
-            input = quotient
-            if remainder == 1:
-                result[i] = onBit
-            else:
-                result[i] = offBit
-            i -= 1
-
-        return result
-
-    def bin_to_dec(self, input: list) -> int:
-        """
-        Converts a binary number to decimal
-        :param input: A binary number as a list of single-character strings
-        :return: The converted decimal number as an int
-        """
-        i: int = len(input) - 1
-        mul = 1
-        dec = 0
-        while True:
-            dec += mul * int(input[i])
-            mul *= 2
-            i -= 1
-            if i < 0:
-                break
-        return dec
-
-    def get_split_address(self, bin_address: list):
-        split_address = {}
-        split_address["tag"] = self.bin_to_dec(bin_address[slice(0, self.tag_end_bit)])
-        split_address["index"] = self.bin_to_dec(bin_address[slice(self.tag_end_bit, self.index_end_bit)])
-        split_address["offset"] = self.bin_to_dec(bin_address[slice(self.index_end_bit, self.offset_end_bit)])
-        return split_address
-
-    def load_block(self, address, line_num):
-        """
-        Load an address block into the cache
+        Load an address block into the cache, performing necessary cache replacements and updating metrics
         :param address: The address as an int
         """
-        bin_address = self.dec_to_bin(address, 32)
-        split_addresses = self.get_split_address(bin_address)
-
-        tag: int = split_addresses["tag"]
-        index: int = split_addresses["index"]
-        offset: int = split_addresses["offset"]
+        tag, index, offset = bit_util.split_dec_address(dec_address = address,
+                                                        tag_end_bit = self.tag_end_bit,
+                                                        index_end_bit = self.index_end_bit,
+                                                        offset_end_bit = self.offset_end_bit)
 
         cache_set: CacheSet = self.sets[index % self.num_sets]
         cache_hit = cache_set.is_block_loaded(tag)
