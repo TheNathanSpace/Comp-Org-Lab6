@@ -44,14 +44,14 @@ if __name__ == '__main__':
     logger: Logger = Logger()
 
     # Load config
-    config_file = Path("config.txt")
+    config_file = Path("../config.txt")
     if not config_file.exists():
         logger.log_and_print("ERROR: config.txt does not exist. Exiting.")
         exit(-1)
     config_dict = read_config_file(config_file = config_file)
 
     # Check that trace file exists
-    trace_file = Path("tracefile.txt")
+    trace_file = Path("../tracefile.txt")
     if not trace_file.exists():
         logger.log_and_print(f"ERROR: {trace_file.name} does not exist. Exiting.")
         exit(-1)

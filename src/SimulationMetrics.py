@@ -1,4 +1,4 @@
-import bit_util
+from src import bit_util
 
 
 class SimulationMetrics:

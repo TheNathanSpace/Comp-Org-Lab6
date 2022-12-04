@@ -4,7 +4,7 @@ For Computer Organization Lab 6.
 
 ## Installation/Usage
 
-You just need Python 3; no additional packages must be installed. Just run `main.py`.
+You just need Python 3; no additional packages must be installed. Define settings in `config.txt` and just run `src/main.py`.
 
 Output is saved to the ./logs/ directory.
 

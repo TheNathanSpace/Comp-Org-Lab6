@@ -4,7 +4,7 @@ from pathlib import Path
 
 class Logger:
     def __init__(self):
-        log_dir = Path.cwd() / Path("logs")
+        log_dir = Path.cwd() / Path("../logs")
         log_dir.mkdir(exist_ok = True)
 
         self.log_file = Path.cwd() / Path(f"logs/log_{int(datetime.datetime.utcnow().timestamp())}.txt")
